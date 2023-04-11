@@ -1,4 +1,5 @@
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -11,9 +12,9 @@ namespace SystemPostaci
     public class PotrzebyContainer
     {
         [Range(0f, 100f)]
+        public float state;
         public float szybkoscPodnoszenia;
         public float szybkoscSpadania = 1f;
-        public float state;
         public Potrzeby TypPotrzeby;
         public PotrzebyContainer(Potrzeby potrzeby)
         {
@@ -24,6 +25,17 @@ namespace SystemPostaci
         public void Spadanie()
         {
             state -= szybkoscSpadania * Time.deltaTime;
+            ClampState();
+        }
+
+        private void ClampState()
+        {
+            state = Mathf.Clamp(state, 0f, 100f);
+        }
+
+        public void Regenerowanie()
+        {
+            state += szybkoscPodnoszenia * Time.deltaTime;
         }
     }
 
@@ -71,6 +83,7 @@ namespace SystemPostaci
             for (int i = 0; i < PotrzebyIlosc; i++)
             {
                 potrzeby[i].Spadanie();
+                potrzeby[i].Regenerowanie();
             }
         }
     }

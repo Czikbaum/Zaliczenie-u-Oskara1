@@ -11,7 +11,7 @@ public class PotrzebyUI : MonoBehaviour
 
     public void SetStatus(float f)
     {
-       
+        f = Mathf.Clamp(f, 0f, 100f);
         statusSlider.value = f;
     }
 }
