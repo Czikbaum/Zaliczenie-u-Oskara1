@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,25 +6,31 @@ using UnityEngine.AI;
 
 namespace SystemPostaci
 {
-
     [System.Serializable]
     public class PotrzebyContainer
     {
         [Range(0f, 100f)]
         public float state;
+        public List<PotrzebyContainer> potrzeby;
+        public NavMeshAgent navMeshAgent;
+        public float threshold = 30f;
+        public Transform objectToMoveTowards;
         public float szybkoscPodnoszenia;
         public float szybkoscSpadania = 1f;
+        public bool isSatisfied = false;
         public Potrzeby TypPotrzeby;
+
         public PotrzebyContainer(Potrzeby potrzeby)
         {
             TypPotrzeby = potrzeby;
         }
 
-
         public void Spadanie()
         {
-            state -= szybkoscSpadania * Time.deltaTime;
-            ClampState();
+            if (!isSatisfied) {
+                state -= szybkoscSpadania * Time.deltaTime;
+                ClampState();
+            }
         }
 
         private void ClampState()
@@ -34,13 +39,19 @@ namespace SystemPostaci
         }
 
         public void Regenerowanie()
+{
+    if (!isSatisfied)
+    {
+        state += szybkoscPodnoszenia * Time.deltaTime;
+        if (state >= 100f)
         {
-            state += szybkoscPodnoszenia * Time.deltaTime;
+            state = 100f;
+            isSatisfied = true;
         }
     }
+}
 
-
-
+    }
 
     public enum Potrzeby
     {
@@ -51,17 +62,15 @@ namespace SystemPostaci
         Higiena,
         Energia,
     }
+
     public class Character : MonoBehaviour
     {
-
+        public NavMeshAgent navMeshAgent;
+        public Animator AIAnimator;
         public List<PotrzebyContainer> potrzeby;
-
         public const int PotrzebyIlosc = 6;
 
-
         [ContextMenu("Zacznij liste potrzeb")]
-
-
         public void InitPotrzeby()
         {
             potrzeby = new List<PotrzebyContainer>();
@@ -71,11 +80,18 @@ namespace SystemPostaci
             }
         }
 
-
         private void Update()
         {
             PotrzebySpadanie();
-            
+            CheckNeeds();
+
+            if(navMeshAgent.velocity.sqrMagnitude > 0)
+            {
+                AIAnimator.SetBool("Ruszasie",true);
+            } else if (navMeshAgent.velocity.sqrMagnitude == 0)
+            {
+                AIAnimator.SetBool("Ruszasie",false);
+            }
         }
 
         private void PotrzebySpadanie()
@@ -86,5 +102,34 @@ namespace SystemPostaci
                 potrzeby[i].Regenerowanie();
             }
         }
+
+       private IEnumerator ResetIsSatisfied(PotrzebyContainer need)
+{
+    yield return new WaitForSeconds(2f);
+    need.isSatisfied = false;
+}
+
+private void CheckNeeds()
+{
+    foreach (PotrzebyContainer need in potrzeby)
+    {
+        if (!need.isSatisfied && need.state < need.threshold)
+        {
+            need.navMeshAgent.SetDestination(need.objectToMoveTowards.position);
+            if (Vector3.Distance(transform.position, need.objectToMoveTowards.position) < 1f)
+            {
+                need.isSatisfied = true;
+                need.szybkoscSpadania = 0f;
+                need.szybkoscPodnoszenia = 0f;
+            }
+            break;
+        }
+        else if (need.isSatisfied)
+        {
+            need.szybkoscPodnoszenia = 0f;
+            StartCoroutine(ResetIsSatisfied(need));
+        }
+    }
+}
     }
 }
